@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
-use ramd_db::storage::Storage;
+use ramd_db::{hashing::HashableVec, storage::Storage};
 use tracing::{error, info};
 
+use crate::hashing::Hashable; 
 pub enum Action {
     CreateLiveObject(CreateLiveObjectAction),
     ExecuteLiveObject(ExecuteLiveObjectAction),
@@ -30,7 +31,13 @@ impl CreateLiveObjectAction {
         S: Storage<Vec<u8>, Vec<u8>>,
     {
         // TODO: use some cryptographic hash as a key.
-        if let Err(e) = cache.set(vec![0], self.wasm_bytes.clone()) {
+        let hashable = HashableVec::new(self.wasm_bytes);
+        let key = hashable.hash_sha256();
+        if let Err(e) = cache.set(
+            // vec![0],
+            key,
+            self.wasm_bytes.clone()
+        ) {
             error!(target: "ramd::processor", "Failed to set wasm bytes to cache with error `{}`", e.to_string());
             return Err(e);
         }
